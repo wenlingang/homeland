@@ -3,7 +3,7 @@
 module ApplicationHelper
   def markdown(text)
     return nil if text.blank?
-    Rails.cache.fetch(["markdown", "v1", Digest::MD5.hexdigest(text)]) do
+    Rails.cache.fetch(["markdown", "v1.1", Digest::MD5.hexdigest(text)]) do
       sanitize_markdown(Homeland::Markdown.call(text))
     end
   end
@@ -27,14 +27,17 @@ module ApplicationHelper
     flash_messages.join("\n").html_safe
   end
 
+  # used in Plugin
   def admin?(user = nil)
     user ||= current_user
-    user.try(:admin?)
+    return false if user.blank?
+    user.admin?
   end
 
   def wiki_editor?(user = nil)
     user ||= current_user
-    user.try(:wiki_editor?)
+    return false if user.blank?
+    user.wiki_editor?
   end
 
   def owner?(item)
@@ -70,25 +73,15 @@ module ApplicationHelper
     agent_str =~ Regexp.new(MOBILE_USER_AGENTS)
   end
 
-  # 可按需修改
-  LANGUAGES_LISTS = {
-    "Ruby"                         => "ruby",
-    "HTML / ERB"                   => "erb",
-    "CSS / SCSS"                   => "scss",
-    "JavaScript"                   => "js",
-    "YAML</i>"                     => "yml",
-    "CoffeeScript"                 => "coffee",
-    "Nginx / Redis <i>(.conf)</i>" => "conf",
-    "Python"                       => "python",
-    "PHP"                          => "php",
-    "Java"                         => "java",
-    "Erlang"                       => "erlang",
-    "Shell / Bash"                 => "shell"
-  }
-
   def insert_code_menu_items_tag
-    lang_list = LANGUAGES_LISTS.map { |k, l| link_to raw(k), "#", class: "dropdown-item", data: { lang: l } }
-    raw lang_list.join("")
+    dropdown_items = []
+    Setting.editor_languages.each do |lang|
+      lexer = Rouge::Lexer.find(lang)
+      if lexer
+        dropdown_items << link_to(lexer.title, "#", class: "dropdown-item", data: { lang: lang })
+      end
+    end
+    raw dropdown_items.join("")
   end
 
   def random_tips

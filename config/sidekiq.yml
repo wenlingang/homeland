@@ -3,18 +3,11 @@
 ---
 :concurrency: <%= ENV["sidekiq_threads"] || 20 %>
 :pidfile: tmp/pids/sidekiq.pid
-:logfile: log/sidekiq.log
 :queues:
   - [notifications, 100]
   - [http_request, 50]
   - [search_indexer, 30]
   - [mailer, 5]
+  - [cleanup, 5]
   - [mailers, 5]
   - [default, 3]
-:schedule:
-  doorkeeper_cleanup:
-    cron: "<%= Random.rand(0..59) %> <%= Random.rand(3..5) %> * * *"
-    class: Scheduler::DoorkeeperCleanupJob
-  notification_cleanup:
-    cron: "<%= Random.rand(0..59) %> <%= Random.rand(3..5) %> * * *"
-    class: Scheduler::NotificationCleanupJob

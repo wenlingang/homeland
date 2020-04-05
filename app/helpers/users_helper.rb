@@ -3,8 +3,6 @@
 require "digest/md5"
 
 module UsersHelper
-  include LetterAvatar::AvatarHelper
-
   # 生成用户 login 的链接，user 参数可接受 user 对象或者 字符串的 login
   def user_name_tag(user, options = {})
     return "匿名" if user.blank?
@@ -43,7 +41,7 @@ module UsersHelper
     width     = user_avatar_width_for_size(version)
     img_class = "media-object avatar-#{width}"
 
-    return image_tag("avatar/#{version}.png", class: img_class) if user.blank?
+    return "" if user.blank?
 
     img =
       if user.avatar?
@@ -64,18 +62,9 @@ module UsersHelper
     end
   end
 
-  def render_user_level_tag(user)
+  def user_level_tag(user)
     return "" if user.blank?
-    level_class = case user.level
-                  when "admin"   then "badge-danger"
-                  when "vip"     then "badge-success"
-                  when "hr"      then "badge-success"
-                  when "blocked" then "badge-warning"
-                  when "newbie"  then "badge-light"
-                  else "badge-info"
-    end
-
-    content_tag(:span, user.level_name, class: "badge #{level_class} role")
+    content_tag(:span, user.level_name, class: "badge-role role-#{user.level}", style: "background: #{user.level_color};")
   end
 
   def block_node_tag(node)

@@ -5,7 +5,7 @@ class Topic < ApplicationRecord
   include Topic::Actions, Topic::AutoCorrect, Topic::Search, Topic::Notify, Topic::RateLimit
 
   # 临时存储检测用户是否读过的结果
-  attr_accessor :read_state, :admin_editing
+  attr_accessor :read_state
 
   belongs_to :user, inverse_of: :topics, counter_cache: true, required: false
   belongs_to :team, counter_cache: true, required: false
@@ -15,6 +15,8 @@ class Topic < ApplicationRecord
   has_many :replies, dependent: :destroy
 
   validates :user_id, :title, :body, :node_id, presence: true
+
+  validate :check_topic_ban_words, on: :create
 
   counter :hits, default: 0
 
@@ -94,6 +96,16 @@ class Topic < ApplicationRecord
   def floor_of_reply(reply)
     reply_index = reply_ids.index(reply.id)
     reply_index + 1
+  end
+
+  def check_topic_ban_words
+    ban_words = Setting.ban_words_in_body.collect(&:strip)
+    ban_words.each do |word|
+      if body.include?(word)
+        errors.add(:body, "敏感词 “#{word}” 禁止发布！")
+        return false
+      end
+    end
   end
 
   def self.total_pages

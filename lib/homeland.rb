@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 require "homeland/version"
+require "homeland/plugin"
 
 module Homeland
+  cattr_reader :boot_at
+
   class << self
     def file_store
       @file_store ||= ActiveSupport::Cache::FileStore.new(Rails.root.join("tmp/cache"))
@@ -13,26 +16,19 @@ module Homeland
       @plugins || []
     end
 
-    # Plugin list sorted by `config.modules` order
-    def sorted_plugins
-      @sorted_plugins ||= plugins.sort do |a, b|
-        Setting.modules.index(a.name) <=> Setting.modules.index(b.name)
-      end
-    end
-
     # Get plugin list that enabled navbar
     def navbar_plugins
-      sorted_plugins.select { |plugin| plugin.navbar_link == true && plugin.root_path.present? }
+      plugins.sort.select { |plugin| plugin.navbar_link == true && plugin.root_path.present? }
     end
 
     # Get plugin list that enabled admin navbar
     def admin_navbar_plugins
-      sorted_plugins.select { |plugin| plugin.admin_navbar_link == true && plugin.admin_path.present? }
+      plugins.sort.select { |plugin| plugin.admin_navbar_link == true && plugin.admin_path.present? }
     end
 
     # Get plugin list that enabled user menu
     def user_menu_plugins
-      sorted_plugins.select { |plugin| plugin.user_menu_link == true && plugin.root_path.present? }
+      plugins.sort.select { |plugin| plugin.user_menu_link == true && plugin.root_path.present? }
     end
 
     # Register a new plugin
@@ -58,7 +54,38 @@ module Homeland
       yield plugin
       @plugins << plugin
       @sorted_plugins = nil
+      plugin.version ||= "0.0.0"
+      plugin.source_path = File.dirname(caller[0])
       plugin
+    end
+
+    def find_plugin(name)
+      self.plugins.find { |p| p.name == name.strip }
+    end
+
+    def boot
+      puts "=> Booting Homeland" unless Rails.env.test?
+      Homeland::Plugin.boot
+      puts "=> Plugins: #{Homeland.plugins.collect(&:name).join(", ")}" unless Rails.env.test?
+      @@boot_at = Time.now
+      # end
+    end
+
+    def reboot
+      FileUtils.touch(Rails.root.join("tmp/restart.txt"))
+    end
+
+    # Run rails migrate directly for Plugin migrations
+    # Used in plugin
+    def migrate_plugin(migration_path)
+      # Execute Migrations on engine load.
+      ActiveRecord::Migrator.migrations_paths += [migration_path]
+      begin
+        ActiveRecord::Tasks::DatabaseTasks.migrate
+      rescue ActiveRecord::NoDatabaseError
+      end
     end
   end
 end
+
+Homeland.boot

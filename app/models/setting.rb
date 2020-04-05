@@ -3,11 +3,12 @@
 # RailsSettings Model
 class Setting < RailsSettings::Base
   # keys that allow update in admin
-  KEYS_IN_ADMIN = %w[
-    navbar_brand_html
+  EDITABLE_KEYS = %w[
     default_locale
     auto_locale
+    timezone
     admin_emails
+    navbar_brand_html
     custom_head_html
     navbar_html
     footer_html
@@ -22,6 +23,7 @@ class Setting < RailsSettings::Base
     reject_newbie_reply_in_the_evening
     newbie_limit_time
     ban_words_on_reply
+    ban_words_in_body
     newbie_notices
     tips
     apns_pem
@@ -37,12 +39,17 @@ class Setting < RailsSettings::Base
     recaptcha_secret
     twitter_id
     share_allow_sites
+    editor_languages
+    sorted_plugins
   ]
 
   # = Basic
   field :app_name, default: (ENV["app_name"] || "Homeland"), readonly: true
-  # Plugin module, [topic,home,wiki,site,note,team,github,editor.code,press,jobs]
+  field :timezone, default: "UTC"
+  # Module [topic,home,team,github,editor.code]
   field :modules, default: (ENV["modules"] || "all"), type: :array, readonly: true
+  # Plugin sort
+  field :sorted_plugins, default: [], type: :array, separator: /[\s,]+/
   # User profile module default: all [company,twitter,website,tagline,location,alipay,paypal,qq,weibo,wechat,douban,dingding,aliwangwang,facebook,instagram,dribbble,battle_tag,psn_id,steam_id]
   field :profile_fields, default: (ENV["profile_fields"] || "all"), type: :array, readonly: true
   field :domain, default: (ENV["domain"] || "localhost"), readonly: true
@@ -131,8 +138,10 @@ class Setting < RailsSettings::Base
   field :ban_reasons, default: "标题或正文描述不清楚", type: :array, separator: /[\n]+/
   field :ban_reason_html, default: "此贴因内容原因不符合要求，被管理员屏蔽，请根据管理员给出的原因进行调整"
   field :ban_words_on_reply, default: [], type: :array, separator: /[\n]+/
+  field :ban_words_in_body, default: [], type: :array, separator: /[\n]+/
   field :newbie_notices, default: ""
   field :tips, default: [], type: :array, separator: /[\n]+/
+  field :editor_languages, default: %w[rb go js py java rs php css html yml json xml], type: :array, separator: /[\s,]+/
 
   # = ReCaptcha
   field :use_recaptcha, default: false, type: :boolean
@@ -142,17 +151,17 @@ class Setting < RailsSettings::Base
   field :google_analytics_key, default: ""
 
   class << self
+    def editable_keys
+      EDITABLE_KEYS
+    end
+
     def protocol
       self.https? ? "https" : "http"
     end
 
     def base_url
+      return "http://localhost:3000" if Rails.env.development?
       [self.protocol, self.domain].join("://")
-    end
-
-    def has_admin?(email)
-      return false if self.admin_emails.blank?
-      self.admin_emails.map { |str| str.strip }.include?(email)
     end
 
     def has_module?(name)

@@ -2,7 +2,7 @@
 
 module Homeland
   # Sanitize
-  # Test case in: spec/helpers/application_helper_spec.rb
+  # Test case in: test/helpers/application_helper_spec.rb
   module Sanitize
     # https://github.com/rgrove/sanitize#example-transformer-to-whitelist-youtube-video-embeds
     EMBED_VIDEO_TRANSFORMER = lambda do |env|
@@ -32,6 +32,11 @@ module Homeland
 
       # Youku
       if node["src"].match?(%r{\A(?:http[s]{0,1}?:)?//player\.youku\.com/embed/})
+        valid_video_url = true
+      end
+
+      # Bilibili
+      if node["src"].match?(%r{\A(?:http[s]{0,1}?:)?//player\.bilibili\.com/player\.html})
         valid_video_url = true
       end
 

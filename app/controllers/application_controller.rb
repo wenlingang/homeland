@@ -4,6 +4,9 @@
 class ApplicationController < ActionController::Base
   protect_from_forgery prepend: true
   helper_method :turbolinks_app?, :turbolinks_ios?, :turbolinks_app_version
+  around_action :set_time_zone
+
+  include SetCurrentInfo
   include Homeland::UserNotificationHelper
 
   # Addition contents for etag
@@ -14,13 +17,21 @@ class ApplicationController < ActionController::Base
   etag { Setting.footer_html }
   etag { Rails.env.development? ? Time.now : Date.current }
 
+  rescue_from ActiveRecord::RecordNotFound do |exception|
+    respond_to do |format|
+      format.json { head :not_found }
+      format.html { render "/errors/404", status: :not_found }
+    end
+  end
+
   before_action do
     resource = controller_name.singularize.to_sym
     method = "#{resource}_params"
     params[resource] &&= send(method) if respond_to?(method, true)
 
     if devise_controller?
-      devise_parameter_sanitizer.permit(:sign_in) { |u| u.permit(*User::ACCESSABLE_ATTRS) }
+      devise_parameter_sanitizer.permit(:sign_up, keys: %i[login email email_public name password password_confirmation _rucaptcha])
+      devise_parameter_sanitizer.permit(:sign_in, keys: %i[login password remember_me])
       devise_parameter_sanitizer.permit(:account_update) do |u|
         if current_user.email_locked?
           u.permit(*User::ACCESSABLE_ATTRS)
@@ -28,10 +39,8 @@ class ApplicationController < ActionController::Base
           u.permit(:email, *User::ACCESSABLE_ATTRS)
         end
       end
-      devise_parameter_sanitizer.permit(:sign_up) { |u| u.permit(*User::ACCESSABLE_ATTRS) }
     end
 
-    User.current = current_user
     cookies.signed[:user_id] ||= current_user.try(:id)
 
     # hit unread_notify_count
@@ -148,6 +157,12 @@ class ApplicationController < ActionController::Base
   end
 
   private
+
+    def set_time_zone(&block)
+      tz = Setting.timezone
+      ActiveSupport::TimeZone.find_tzinfo(tz) rescue tz = "UTC"
+      Time.use_zone(tz, &block)
+    end
 
     def user_locale
       params[:locale] || cookies[:locale] || http_head_locale || Setting.default_locale || I18n.default_locale

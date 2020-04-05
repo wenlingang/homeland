@@ -5,9 +5,10 @@ require "digest/md5"
 class User < ApplicationRecord
   include Searchable
   include User::Roles, User::Blockable, User::Likeable, User::Followable, User::TopicActions,
-          User::GitHubRepository, User::ProfileFields, User::RewardFields, User::Omniauthable
+          User::GitHubRepository, User::ProfileFields, User::RewardFields, User::Omniauthable,
+          User::Avatar
 
-  second_level_cache expires_in: 2.weeks
+  second_level_cache version: 4, expires_in: 2.weeks
 
   LOGIN_FORMAT              = 'A-Za-z0-9\-\_\.'
   ALLOW_LOGIN_FORMAT_REGEXP = /\A[#{LOGIN_FORMAT}]+\z/
@@ -17,8 +18,6 @@ class User < ApplicationRecord
 
   devise :database_authenticatable, :registerable, :recoverable, :lockable,
          :rememberable, :trackable, :validatable, :omniauthable
-
-  mount_uploader :avatar, AvatarUploader
 
   has_many :topics, dependent: :destroy
   has_many :replies, dependent: :destroy
@@ -33,9 +32,6 @@ class User < ApplicationRecord
 
   attr_accessor :password_confirmation
 
-
-  enum state: { deleted: -1, normal: 1, blocked: 2 }
-
   validates :login, format: { with: ALLOW_LOGIN_FORMAT_REGEXP, message: "只允许数字、大小写字母、中横线、下划线" },
                     length: { in: 2..20 },
                     presence: true,
@@ -48,7 +44,7 @@ class User < ApplicationRecord
   scope :without_team, -> { where(type: nil) }
   scope :fields_for_list, lambda {
     select(:type, :id, :name, :login, :email, :email_md5, :email_public,
-           :avatar, :verified, :state, :tagline, :github, :website, :location,
+           :avatar, :state, :tagline, :github, :website, :location,
            :location_id, :twitter, :team_users_count, :created_at, :updated_at)
   }
 
@@ -156,24 +152,6 @@ class User < ApplicationRecord
   def soft_delete
     self.state = "deleted"
     save(validate: false)
-  end
-
-  def letter_avatar_url(size)
-    path = LetterAvatar.generate(self.login, size).sub("public/", "/")
-
-    "#{Setting.base_url}#{path}"
-  end
-
-  def large_avatar_url
-    if self[:avatar].present?
-      self.avatar.url(:lg)
-    else
-      self.letter_avatar_url(192)
-    end
-  end
-
-  def avatar?
-    self[:avatar].present?
   end
 
   # @example.com 的可以修改邮件地址

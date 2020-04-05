@@ -1,9 +1,9 @@
 data/
 log/
 tmp/
-public/system/
 public/uploads/
 spec/
+plugins/*
 test/
 doc/
 coverage/

@@ -54,7 +54,6 @@ class TopicsController < ApplicationController
     @user_like_reply_ids = current_user&.like_reply_ids_by_replies(@replies) || []
 
     check_current_user_status_for_topic
-    set_special_node_active_menu
   end
 
   def new
@@ -87,13 +86,11 @@ class TopicsController < ApplicationController
   end
 
   def update
-    @topic.admin_editing = true if current_user.admin?
-
     if can?(:change_node, @topic)
       # 锁定接点的时候，只有管理员可以修改节点
       @topic.node_id = topic_params[:node_id]
 
-      if current_user.admin? && @topic.node_id_changed?
+      if @topic.node_id_changed? && can?(:lock_node, @topic)
         # 当管理员修改节点的时候，锁定节点
         @topic.lock_node = true
       end
@@ -181,14 +178,5 @@ class TopicsController < ApplicationController
       @has_followed = current_user.follow_topic?(@topic)
       # 是否收藏
       @has_favorited = current_user.favorite_topic?(@topic)
-    end
-
-    def set_special_node_active_menu
-      if Setting.has_module?(:jobs)
-        # FIXME: Monkey Patch for homeland-jobs
-        if @node&.id == 25
-          @current = ["/jobs"]
-        end
-      end
     end
 end

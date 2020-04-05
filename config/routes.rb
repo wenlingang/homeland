@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "sidekiq/web"
-require "sidekiq-scheduler/web"
+require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
   use_doorkeeper do
@@ -21,6 +21,7 @@ Rails.application.routes.draw do
   match "/uploads/:path(![large|lg|md|sm|xs])", to: "home#uploads", via: :get, constraints: {
     path: /[\w\d\.\/\-]+/i
   }
+  get "status", to: "home#status"
 
   devise_for :users, path: "account", controllers: {
     registrations: :account,
@@ -48,7 +49,7 @@ Rails.application.routes.draw do
     end
   end
 
-  delete "setting/auth/:provider", to: "settings#auth_unbind"
+  delete "setting/auth/:provider", to: "settings#auth_unbind", as: "auth_unbind_setting"
 
   resources :nodes do
     member do
@@ -98,7 +99,12 @@ Rails.application.routes.draw do
   get "/search/users", to: "search#users", as: "search_users"
 
   namespace :admin do
-    root to: "home#index", as: "root"
+    root to: "dashboards#index", as: "root"
+    resource :dashboards do
+      collection do
+        post :reboot
+      end
+    end
     resources :site_configs
     resources :replies
     resources :topics do
@@ -120,6 +126,7 @@ Rails.application.routes.draw do
     resources :locations
     resources :applications
     resources :stats
+    resources :plugins
   end
 
   get "api", to: "home#api", as: "api"
@@ -187,7 +194,6 @@ Rails.application.routes.draw do
   end
 
   mount Notifications::Engine, at: "notifications"
-  mount StatusPage::Engine, at: "/"
 
   # WARRING! 请保持 User 的 routes 在所有路由的最后，以便于可以让用户名在根目录下面使用，而又不影响到其他的 routes
   # 比如 http://localhost:3000/huacnlee

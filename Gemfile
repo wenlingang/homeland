@@ -4,10 +4,9 @@ source "https://rubygems.org"
 
 git_source(:github) { |repo_name| "https://github.com/#{repo_name}.git" }
 
-gem "coffee-rails"
 gem "jbuilder"
 gem "jquery-rails"
-gem "rails", "~> 6.0.0"
+gem "rails"
 gem "rails_autolink"
 gem "sass-rails"
 gem "sprockets"
@@ -47,8 +46,7 @@ gem "carrierwave-qiniu"
 # Lazy load
 gem "mini_magick", require: false
 
-# 验证码，头像
-gem "letter_avatar"
+# 验证码
 gem "rucaptcha"
 gem "recaptcha"
 
@@ -84,7 +82,6 @@ gem "omniauth-github"
 gem "cancancan"
 
 # Redis
-gem "hiredis"
 gem "redis"
 gem "redis-namespace"
 gem "redis-objects"
@@ -96,14 +93,15 @@ gem "second_level_cache"
 gem "rails-settings-cached"
 
 # HTML Pipeline
-gem "auto-space"
+gem "auto-correct"
 gem "html-pipeline"
-gem "html-pipeline-rouge_filter"
+gem "html-pipeline-auto-correct"
 gem "redcarpet"
+gem "rouge"
 
 # 队列
 gem "sidekiq"
-gem "sidekiq-scheduler"
+gem "sidekiq-cron"
 
 # 分享功能
 gem "social-share-button"
@@ -116,35 +114,29 @@ gem "puma"
 
 # API cors
 gem "rack-cors", require: "rack/cors"
-gem "rack-utf8_sanitizer"
 
 gem "exception-track"
-gem "status-page"
-
-# Homeland Plugins
-gem "homeland-jobs"
-gem "homeland-note"
-gem "homeland-press"
-gem "homeland-site"
-gem "homeland-wiki"
 
 gem "bootsnap"
+gem "lograge"
+
+# Lock version
+gem "sassc", "2.0.1"
 
 group :development do
-  gem "derailed"
   gem "spring"
-  gem "spring-commands-rspec"
+  gem "byebug"
 end
 
 group :development, :test do
   gem "sdoc"
-  gem "capybara"
-  gem "database_cleaner"
-  gem "factory_bot_rails"
   gem "letter_opener"
   gem "listen"
-  gem "rspec-rails"
-  gem "rubocop", ">= 0.49.0", require: false
 
+  gem "mocha"
+  gem "minitest-spec-rails"
+  gem "factory_bot_rails"
+
+  gem "rubocop", require: false
   gem "codecov", require: false
 end

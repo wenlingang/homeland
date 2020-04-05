@@ -3,15 +3,26 @@
 module Admin
   class UsersController < Admin::ApplicationController
     def index
-      @users = User.all
+      scope = User.all
+      scope = scope.where(type: params[:type]) if params[:type].present?
+      scope = scope.where(state: params[:state]) if params[:state].present?
+      field = params[:field] || "login"
+
       if params[:q].present?
         qstr = "%#{params[:q].downcase}%"
-        @users = @users.where("lower(login) LIKE ? or lower(email) LIKE ?", qstr, qstr)
+        scope = begin
+          case params[:field]
+          when "login"
+            scope.where("lower(login) LIKE ?", qstr)
+          when "email"
+            scope.where("lower(email) LIKE ?", qstr)
+          when "name"
+            scope.where("lower(name) LIKE ?", qstr)
+          end
+        end
       end
-      if params[:type].present?
-        @users = @users.where(type: params[:type])
-      end
-      @users = @users.order(id: :desc).page(params[:page])
+
+      @users = scope.order(id: :desc).page(params[:page])
     end
 
     def show
@@ -32,7 +43,6 @@ module Admin
       @user.email = params[:user][:email]
       @user.login = params[:user][:login]
       @user.state = params[:user][:state]
-      @user.verified = params[:user][:verified]
 
       if @user.save
         redirect_to(admin_users_path, notice: "User was successfully created.")
@@ -46,7 +56,6 @@ module Admin
       @user.email = params[:user][:email]
       @user.login = params[:user][:login]
       @user.state = params[:user][:state]
-      @user.verified = params[:user][:verified]
 
       if @user.update(params[:user].permit!)
         redirect_to(edit_admin_user_path(@user.id), notice: "User was successfully updated.")
