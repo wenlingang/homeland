@@ -41,3 +41,4 @@ spec/examples.txt
 !/plugins/test/
 app.local.env
 *.tmp
+config/database.yml
